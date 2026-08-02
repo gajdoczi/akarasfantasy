@@ -204,7 +204,12 @@ body{padding:0;}
 }
 .identity-chip .logout{ font-size:11px; color:var(--text-dim); cursor:pointer; border-left:1px solid var(--line); padding-left:8px; }
 .identity-chip .logout:hover{ color:var(--danger); }
+.identity-chip .email{ font-size:11px; color:var(--text-dim); }
 .login-msg{ font-size:11px; color:var(--danger); }
+.auth-toggle{ font-size:11px; color:var(--teal); cursor:pointer; text-decoration:underline; white-space:nowrap; }
+.auth-toggle:hover{ color:var(--gold-bright); }
+.login-bar input[type="email"]{ width:170px; }
+.login-bar input[type="password"]{ width:130px; }
 
 /* ---------- POINTS BADGE ---------- */
 .points-badge{
@@ -314,7 +319,7 @@ const storage = {
    DATA
    ============================================================ */
 const ROLES = ["TOP","JGL","MID","ADC","SUP"];
-const ROLE_LABEL = {TOP:"Top",JGL:"Jungle",MID:"Mid",ADC:"ADC",SUP:"Support",FLEX:"Flex"};
+const ROLE_LABEL = {TOP:"Top",JGL:"Jungle",MID:"Mid",ADC:"ADC",SUP:"Support",TEAM:"Team"};
 
 const ROLE_ICON = {
   TOP: `<path d="M6 20 L18 8 M14 6 L18 6 L18 10" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
@@ -322,7 +327,7 @@ const ROLE_ICON = {
   MID: `<rect x="5" y="6" width="14" height="12" rx="1" stroke="currentColor" stroke-width="2" fill="none"/><line x1="12" y1="6" x2="12" y2="18" stroke="currentColor" stroke-width="1.5"/>`,
   ADC: `<path d="M4 18 L18 4 M13 4 L18 4 L18 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 18 L8 20 L6 14Z" fill="currentColor"/>`,
   SUP: `<path d="M12 4 L19 7 V12 C19 16 16 19 12 20 C8 19 5 16 5 12 V7 Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>`,
-  FLEX:`<circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2"/>`
+  TEAM:`<path d="M6 4 V20 M6 5 H17 L14 8 L17 11 H6 Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>`
 };
 
 const REGION_META = {
@@ -332,6 +337,7 @@ const REGION_META = {
 };
 
 const TIER_COST = { S:30, A:18, B:11, C:6 };
+const TIER_VALUE = { S:4, A:3, B:2, C:1 }; // numeric weight per player tier, used to power-rank teams
 const MAX_PER_TEAM = 2;
 
 // id helper
@@ -399,17 +405,11 @@ const RAW_DATA = {
     { team:"Ninjas in Pyjamas", players:[
       ["TOP","HOYA","C"], ["JGL","Guwon","C"], ["MID","Care","C"], ["ADC","Photic","B"], ["SUP","Fengyue","C"]
     ]},
-    { team:"Oh My God", players:[
-      ["TOP","Hery","B"], ["JGL","re0","C"], ["MID","haichao","B"], ["ADC","Starry","A"], ["SUP","Moham","B"]
-    ]},
     { team:"Top Esports", players:[
       ["TOP","ZUIAN","B"], ["JGL","Tian","A"], ["MID","Creme","B"], ["ADC","JackeyLove","A"], ["SUP","Zhuo","B"]
     ]},
     { team:"ThunderTalk Gaming", players:[
       ["TOP","Keshi","C"], ["JGL","Junhao","C"], ["MID","Heru","C"], ["ADC","Ahn","C"], ["SUP","Feather","C"]
-    ]},
-    { team:"Ultra Prime", players:[
-      ["TOP","sasi","B"], ["JGL","climber","C"], ["MID","Saber","B"], ["ADC","Hena","C"], ["SUP","Xiaoxia","C"]
     ]},
     { team:"Weibo Gaming", players:[
       ["TOP","Zika","B"], ["JGL","jiejie","A"], ["MID","Xiaohu","A"], ["ADC","Elk","A"], ["SUP","Jwei","B"]
@@ -471,14 +471,15 @@ const DATA = buildRegionData();
    STATE
    ============================================================ */
 const SPLITS = ["2026 Summer","2026 Spring","2027 Spring"];
-const BUDGET_CAP = 100;
+const BUDGET_CAP_BY_REGION = { LCK:100, LPL:100, LEC:75 };
+function budgetCap(){ return BUDGET_CAP_BY_REGION[state.region] || 100; }
 const POINTS_WIN = 3;
 const POINTS_MVP = 5;
 
 let state = {
   region: "LCK",
   split: "2026 Summer",
-  roster: { TOP:null, JGL:null, MID:null, ADC:null, SUP:null, FLEX:null },
+  roster: { TOP:null, JGL:null, MID:null, ADC:null, SUP:null, TEAM:null },
   filterRole: "ALL",
   search: "",
   sort: "team",
@@ -487,13 +488,15 @@ let state = {
   customPlayers: [], // {id,region,team,role,name,tier,baseCost}
   saveMsg: "",
   section: "draft",  // draft | matches | leaderboard
-  username: null,
-  authToken: null,
-  loginInput: "",
-  loginMsg: "",
+  user: null,        // {email, name} when logged in
+  authMode: "login",  // login | signup
+  authEmail: "",
+  authPassword: "",
+  authName: "",
+  authMsg: "",
   matches: [],       // for current region+split: {id,week,team1,team2,winner,mvpId,mvpName}
   matchForm: { week:"", team1:"", team2:"", winner:"", mvpId:"" },
-  leaderboard: []     // [{username, points, updatedAt}]
+  leaderboard: []     // [{email, name, points, updatedAt}]
 };
 
 function costOf(p){
@@ -517,14 +520,60 @@ function teamsForRegion(region){
   return map;
 }
 
+/* ---------- TEAM POWER RANKINGS ----------
+   A team's Blue Essence cost is derived from its power ranking within
+   its region — best to worst — then bucketed into the same S/A/B/C
+   scale (and BE cost) used for individual players. The order below is
+   the stated power ranking for each region. Any team not listed here
+   (e.g. a club added later via Edit Roster Data) is ranked by its
+   roster's combined tier strength and slotted in after the named list. */
+const TEAM_POWER_RANKING = {
+  LPL: ["Bilibili Gaming","Anyone's Legend","Top Esports","JD Gaming","Team WE","Invictus Gaming","Weibo Gaming","Ninjas in Pyjamas","LGD Gaming","LNG Esports","ThunderTalk Gaming","EDward Gaming"],
+  LCK: ["Hanwha Life Esports","Gen.G","T1","KT Rolster","Dplus KIA","Nongshim RedForce","BNK FEARX","HANJIN BRION","Kiwoom DRX","DN SOOPers"],
+  LEC: ["G2 Esports","Karmine Corp","Team Vitality","Movistar KOI","Natus Vincere","Fnatic","SK Gaming","GIANTX","Shifters","Team Heretics"]
+};
+
+function teamPowerScore(region, team){
+  const players = teamsForRegion(region)[team] || [];
+  return players.reduce((sum,p)=> sum + (TIER_VALUE[p.tier] || 0), 0);
+}
+
+function rankedTeams(region){
+  const known = TEAM_POWER_RANKING[region] || [];
+  const allTeams = Object.keys(teamsForRegion(region));
+  const ranked = known
+    .filter(team => allTeams.includes(team))
+    .map(team => ({ team, score: teamPowerScore(region, team) }));
+  const extras = allTeams
+    .filter(team => !known.includes(team))
+    .map(team => ({ team, score: teamPowerScore(region, team) }))
+    .sort((a,b) => b.score - a.score);
+  return ranked.concat(extras);
+}
+
+function teamTierFor(region, team){
+  const ranked = rankedTeams(region);
+  const idx = ranked.findIndex(r => r.team === team);
+  if(idx === -1 || ranked.length === 0) return "C";
+  const pct = idx / ranked.length; // 0 = strongest team
+  if(pct < 0.2) return "S";
+  if(pct < 0.45) return "A";
+  if(pct < 0.75) return "B";
+  return "C";
+}
+
+function teamCostOf(region, team){
+  return TIER_COST[teamTierFor(region, team)];
+}
+
 function rosterKey(){ return "roster:"+state.region+":"+state.split; }
 function overridesKey(){ return "cost-overrides"; }
 function customKey(){ return "custom-players"; }
 function matchesKey(){ return "matches:"+state.region+":"+state.split; }
-function identityKey(){ return "my-identity"; }
+function sessionKey(){ return "session"; }
 function lastViewKey(){ return "last-view"; }
-function claimKey(name){ return "identity:"+name.toLowerCase(); }
-function leaderboardKey(username){ return "leaderboard:"+state.region+":"+state.split+":"+username.toLowerCase(); }
+function accountKey(email){ return "account:"+email.trim().toLowerCase(); }
+function leaderboardKey(email){ return "leaderboard:"+state.region+":"+state.split+":"+email.toLowerCase(); }
 function leaderboardPrefix(){ return "leaderboard:"+state.region+":"+state.split+":"; }
 
 function pointsForRoster(roster, matches){
@@ -545,10 +594,12 @@ function myPoints(){
 
 function spentTotal(){
   let sum = 0;
-  ROLES.concat(["FLEX"]).forEach(r=>{
+  ROLES.forEach(r=>{
     const p = state.roster[r];
     if(p) sum += costOf(p);
   });
+  const t = state.roster.TEAM;
+  if(t) sum += teamCostOf(t.region, t.team);
   return sum;
 }
 
@@ -583,11 +634,16 @@ async function loadAll(){
     if(cp && cp.value) state.customPlayers = JSON.parse(cp.value);
   }catch(e){}
   try{
-    const id = await storage.get(identityKey());
-    if(id && id.value){
-      const parsed = JSON.parse(id.value);
-      state.username = parsed.username;
-      state.authToken = parsed.token;
+    const s = await storage.get(sessionKey());
+    if(s && s.value){
+      const parsed = JSON.parse(s.value);
+      if(parsed.email){
+        const acc = await storage.get(accountKey(parsed.email), true);
+        if(acc && acc.value){
+          const account = JSON.parse(acc.value);
+          state.user = { email: account.email, name: account.name };
+        }
+      }
     }
   }catch(e){}
   await loadRoster();
@@ -601,26 +657,30 @@ async function saveLastView(){
 }
 
 async function loadRoster(){
-  state.roster = { TOP:null, JGL:null, MID:null, ADC:null, SUP:null, FLEX:null };
+  state.roster = { TOP:null, JGL:null, MID:null, ADC:null, SUP:null, TEAM:null };
   try{
     const r = await storage.get(rosterKey());
     if(r && r.value){
       const ids = JSON.parse(r.value);
-      Object.keys(ids).forEach(slot=>{
+      ROLES.forEach(slot=>{
         if(ids[slot]){
           const p = findPlayerById(ids[slot]);
           if(p) state.roster[slot] = p;
         }
       });
+      if(ids.TEAM){
+        state.roster.TEAM = { __kind:"team", region: state.region, team: ids.TEAM };
+      }
     }
   }catch(e){}
 }
 
 async function saveRoster(){
   const ids = {};
-  Object.keys(state.roster).forEach(slot=>{
+  ROLES.forEach(slot=>{
     ids[slot] = state.roster[slot] ? state.roster[slot].id : null;
   });
+  ids.TEAM = state.roster.TEAM ? state.roster.TEAM.team : null;
   try{
     const result = await storage.set(rosterKey(), JSON.stringify(ids));
     if(result){
@@ -638,8 +698,8 @@ async function saveRoster(){
 }
 
 async function clearRoster(){
-  state.roster = { TOP:null, JGL:null, MID:null, ADC:null, SUP:null, FLEX:null };
-  try{ await storage.set(rosterKey(), JSON.stringify({TOP:null,JGL:null,MID:null,ADC:null,SUP:null,FLEX:null})); }catch(e){}
+  state.roster = { TOP:null, JGL:null, MID:null, ADC:null, SUP:null, TEAM:null };
+  try{ await storage.set(rosterKey(), JSON.stringify({TOP:null,JGL:null,MID:null,ADC:null,SUP:null,TEAM:null})); }catch(e){}
   await syncLeaderboard();
   render();
 }
@@ -651,46 +711,76 @@ async function saveCustom(){
   try{ await storage.set(customKey(), JSON.stringify(state.customPlayers)); }catch(e){}
 }
 
-/* ---------- IDENTITY / LOGIN ---------- */
-function genToken(){
+/* ---------- IDENTITY / EMAIL AUTH ----------
+   Note: this is a self-contained HTML file with no server, so there is
+   no real mail service to send a verification link through. Passwords
+   are salted and hashed with SHA-256 before being stored, but this is
+   still local, client-side "auth" — good enough to keep casual users'
+   profiles separate, not a substitute for real backend authentication. */
+function genSalt(){
   if(window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
-  return "tok-"+Math.random().toString(36).slice(2)+Date.now();
+  return "salt-"+Math.random().toString(36).slice(2)+Date.now();
 }
 
-async function claimUsername(name){
+async function hashPassword(password, salt){
+  const enc = new TextEncoder();
+  const data = enc.encode(salt+":"+password);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+function isValidEmail(email){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function signup(email, password, name){
+  state.authMsg = "";
+  email = (email||"").trim().toLowerCase();
   name = (name||"").trim();
-  state.loginMsg = "";
-  if(!name){ state.loginMsg = "Enter a name first."; render(); return; }
-  if(name.length > 20){ state.loginMsg = "Keep it under 20 characters."; render(); return; }
+  if(!isValidEmail(email)){ state.authMsg = "Enter a valid email address."; render(); return; }
+  if(!password || password.length < 6){ state.authMsg = "Password must be at least 6 characters."; render(); return; }
+  if(!name){ state.authMsg = "Enter a display name."; render(); return; }
+  if(name.length > 20){ state.authMsg = "Keep the display name under 20 characters."; render(); return; }
   try{
-    let taken = null;
-    try{ taken = await storage.get(claimKey(name), true); }catch(e){ taken = null; }
-    const myToken = genToken();
-    if(taken && taken.value){
-      const parsed = JSON.parse(taken.value);
-      if(parsed.token && (!state.authToken || parsed.token !== state.authToken)){
-        state.loginMsg = "That name is already taken — try another.";
-        render();
-        return;
-      }
-    }
-    const token = (taken && taken.value ? JSON.parse(taken.value).token : myToken);
-    await storage.set(claimKey(name), JSON.stringify({ token }), true);
-    await storage.set(identityKey(), JSON.stringify({ username: name, token }));
-    state.username = name;
-    state.authToken = token;
-    state.loginInput = "";
+    const existing = await storage.get(accountKey(email), true);
+    if(existing && existing.value){ state.authMsg = "An account with that email already exists — log in instead."; render(); return; }
+    const salt = genSalt();
+    const passHash = await hashPassword(password, salt);
+    const account = { email, name, salt, passHash, createdAt: Date.now() };
+    await storage.set(accountKey(email), JSON.stringify(account), true);
+    await storage.set(sessionKey(), JSON.stringify({ email }));
+    state.user = { email, name };
+    state.authEmail = ""; state.authPassword = ""; state.authName = ""; state.authMsg = "";
     await syncLeaderboard();
   }catch(e){
-    state.loginMsg = "Couldn't reach storage — try again.";
+    state.authMsg = "Couldn't reach storage — try again.";
+  }
+  render();
+}
+
+async function login(email, password){
+  state.authMsg = "";
+  email = (email||"").trim().toLowerCase();
+  if(!email || !password){ state.authMsg = "Enter your email and password."; render(); return; }
+  try{
+    const existing = await storage.get(accountKey(email), true);
+    if(!existing || !existing.value){ state.authMsg = "No account found for that email."; render(); return; }
+    const account = JSON.parse(existing.value);
+    const passHash = await hashPassword(password, account.salt);
+    if(passHash !== account.passHash){ state.authMsg = "Incorrect email or password."; render(); return; }
+    await storage.set(sessionKey(), JSON.stringify({ email }));
+    state.user = { email: account.email, name: account.name };
+    state.authEmail = ""; state.authPassword = ""; state.authMsg = "";
+    await syncLeaderboard();
+  }catch(e){
+    state.authMsg = "Couldn't reach storage — try again.";
   }
   render();
 }
 
 function logout(){
-  state.username = null;
-  state.authToken = null;
-  try{ storage.delete(identityKey()); }catch(e){}
+  state.user = null;
+  try{ storage.delete(sessionKey()); }catch(e){}
   render();
 }
 
@@ -733,11 +823,11 @@ async function deleteMatch(id){
 
 /* ---------- LEADERBOARD ---------- */
 async function syncLeaderboard(){
-  if(!state.username) return;
+  if(!state.user) return;
   const pts = myPoints();
   try{
-    await storage.set(leaderboardKey(state.username), JSON.stringify({
-      username: state.username, points: pts, squadSize: Object.values(state.roster).filter(Boolean).length,
+    await storage.set(leaderboardKey(state.user.email), JSON.stringify({
+      email: state.user.email, name: state.user.name, points: pts, squadSize: Object.values(state.roster).filter(Boolean).length,
       updatedAt: Date.now()
     }), true);
   }catch(e){}
@@ -767,9 +857,8 @@ async function loadLeaderboard(){
    ACTIONS
    ============================================================ */
 function slotForRole(role){
-  // starter slot if empty, else flex if empty and role differs
+  // one player per starter role — no flex duplicate anymore, that's now the TEAM slot
   if(!state.roster[role]) return role;
-  if(!state.roster.FLEX) return "FLEX";
   return null;
 }
 
@@ -778,7 +867,9 @@ function isOwned(p){
 }
 
 function countFromTeam(team){
-  return Object.values(state.roster).filter(x => x && x.team === team).length;
+  // only the 5 player role slots count toward the per-club player cap;
+  // the TEAM slot holds a whole club, not a player
+  return ROLES.filter(r => state.roster[r] && state.roster[r].team === team).length;
 }
 
 function teamCapReached(p){
@@ -789,9 +880,18 @@ function addPlayer(p){
   const slot = slotForRole(p.role);
   if(!slot) return;
   const newSpent = spentTotal() + costOf(p);
-  if(newSpent > BUDGET_CAP) return;
+  if(newSpent > budgetCap()) return;
   if(teamCapReached(p)) return;
   state.roster[slot] = p;
+  render();
+}
+
+function addTeamToSlot(team){
+  if(state.roster.TEAM) return;
+  const cost = teamCostOf(state.region, team);
+  const newSpent = spentTotal() + cost;
+  if(newSpent > budgetCap()) return;
+  state.roster.TEAM = { __kind:"team", region: state.region, team };
   render();
 }
 
@@ -811,14 +911,18 @@ function removePlayerEverywhere(p){
    RENDER
    ============================================================ */
 function renderLoginWidget(){
-  if(state.username){
-    return `<div class="identity-chip">Playing as <b>${state.username}</b><span class="logout" data-action="logout">log out</span></div>`;
+  if(state.user){
+    return `<div class="identity-chip">Playing as <b>${state.user.name}</b><span class="email">${state.user.email}</span><span class="logout" data-action="logout">log out</span></div>`;
   }
+  const isSignup = state.authMode === "signup";
   return `
     <div class="login-bar">
-      <input type="text" placeholder="Choose a name" id="login-name" value="${state.loginInput}">
-      <button class="btn primary" data-action="login">Log In</button>
-      ${state.loginMsg ? `<span class="login-msg">${state.loginMsg}</span>` : ""}
+      <input type="email" placeholder="Email" id="auth-email" value="${state.authEmail}">
+      <input type="password" placeholder="Password" id="auth-password" value="${state.authPassword}">
+      ${isSignup ? `<input type="text" placeholder="Display name" id="auth-name" value="${state.authName}">` : ""}
+      <button class="btn primary" data-action="auth-submit">${isSignup ? "Sign Up" : "Log In"}</button>
+      <span class="auth-toggle" data-action="auth-toggle">${isSignup ? "Have an account? Log in" : "New here? Sign up"}</span>
+      ${state.authMsg ? `<span class="login-msg">${state.authMsg}</span>` : ""}
     </div>`;
 }
 
@@ -831,8 +935,9 @@ function render(){
   const meta = REGION_META[state.region];
   const root = document.getElementById("root");
   const spent = spentTotal();
-  const pct = Math.min(100, (spent/BUDGET_CAP)*100);
-  const over = spent > BUDGET_CAP;
+  const cap = budgetCap();
+  const pct = Math.min(100, (spent/cap)*100);
+  const over = spent > cap;
   const filledCount = Object.values(state.roster).filter(Boolean).length;
 
   let html = `<div class="app" style="--rc:${meta.color};--rc-dim:${meta.colorDim}">`;
@@ -857,7 +962,7 @@ function render(){
   // essence meter
   html += `
     <div class="essence-wrap">
-      <div class="essence-label"><span>Blue Essence Cap</span><b>${spent} / ${BUDGET_CAP}${over?' — OVER CAP':''}</b></div>
+      <div class="essence-label"><span>Blue Essence Cap</span><b>${spent} / ${cap}${over?' — OVER CAP':''}</b></div>
       <div class="essence-bar"><div class="essence-fill ${over?'over':''}" style="width:${pct}%"></div></div>
       <div class="essence-label" style="margin-top:6px;">
         <span>Max ${MAX_PER_TEAM} players per club</span>
@@ -867,13 +972,13 @@ function render(){
 
   // roster slots
   html += `<div class="roster-row">`;
-  ["TOP","JGL","MID","ADC","SUP","FLEX"].forEach(slot=>{
+  ["TOP","JGL","MID","ADC","SUP"].forEach(slot=>{
     const p = state.roster[slot];
     if(p){
       html += `
         <div class="slot filled" data-action="removeslot" data-slot="${slot}" title="Click to remove">
           <span class="remove-x">✕ remove</span>
-          <div class="role-tag">${ROLE_LABEL[slot]}${slot==='FLEX'?' · '+p.role:''}</div>
+          <div class="role-tag">${ROLE_LABEL[slot]}</div>
           ${svgIcon(p.role)}
           <div class="pname">${p.name}</div>
           <div class="pteam">${p.team}</div>
@@ -888,6 +993,34 @@ function render(){
         </div>`;
     }
   });
+  const teamEntry = state.roster.TEAM;
+  if(teamEntry){
+    const tCost = teamCostOf(teamEntry.region, teamEntry.team);
+    const tTier = teamTierFor(teamEntry.region, teamEntry.team);
+    html += `
+      <div class="slot filled" data-action="removeslot" data-slot="TEAM" title="Click to remove">
+        <span class="remove-x">✕ remove</span>
+        <div class="role-tag">Team</div>
+        ${svgIcon("TEAM")}
+        <div class="pname">${teamEntry.team}</div>
+        <div class="pteam">${tTier} tier club</div>
+        <div class="pcost">${tCost} BE</div>
+      </div>`;
+  } else {
+    html += `
+      <div class="slot">
+        <div class="role-tag">Team</div>
+        ${svgIcon("TEAM")}
+        <select class="team-pick-select" data-action="teamselect">
+          <option value="">Pick a club…</option>
+          ${rankedTeams(state.region).map(r=>{
+            const cost = teamCostOf(state.region, r.team);
+            const wouldExceed = spent + cost > cap;
+            return `<option value="${r.team}" ${wouldExceed?'disabled':''}>${r.team} — ${cost} BE (${teamTierFor(state.region,r.team)})</option>`;
+          }).join("")}
+        </select>
+      </div>`;
+  }
   html += `</div>`;
 
   // actions
@@ -900,7 +1033,7 @@ function render(){
     </div>`;
 
   if(over){
-    html += `<div class="disclaimer" style="border-color:#5a2430;background:rgba(232,73,95,.08);color:#ff9aa8;">You're over the Blue Essence cap by ${spent-BUDGET_CAP}. Remove a player before saving.</div>`;
+    html += `<div class="disclaimer" style="border-color:#5a2430;background:rgba(232,73,95,.08);color:#ff9aa8;">You're over the Blue Essence cap by ${spent-cap}. Remove a player or your team pick before saving.</div>`;
   }
 
   if(state.editMode){
@@ -1033,14 +1166,14 @@ function renderMatchPanel(meta){
 
 function renderLeaderboardPanel(){
   let html = `<div class="lb-panel">`;
-  html += `<div class="rules-note">Ranking for ${state.region} — ${state.split}. Log in and save a squad to appear here; your points update automatically whenever you save your roster or matches change. Everything is saved locally in this browser, so this leaderboard only shows squads you've saved from this device.</div>`;
+  html += `<div class="rules-note">Ranking for ${state.region} — ${state.split}. Sign up or log in and save a squad to appear here; your points update automatically whenever you save your roster or matches change. Everything is saved locally in this browser, so this leaderboard only shows squads you've saved from this device.</div>`;
   if(state.leaderboard.length === 0){
     html += `<div class="lb-empty">No one has saved a squad for this region and split yet.</div>`;
   } else {
     html += `<table class="lb-table"><thead><tr><th>#</th><th>Manager</th><th>Squad Size</th><th>Points</th></tr></thead><tbody>`;
     state.leaderboard.forEach((e,i)=>{
-      const isMe = state.username && e.username.toLowerCase() === state.username.toLowerCase();
-      html += `<tr class="${isMe?'me':''}"><td class="lb-rank">${i+1}</td><td>${e.username}${isMe?' (you)':''}</td><td>${e.squadSize}/6</td><td class="lb-points">${e.points}</td></tr>`;
+      const isMe = state.user && e.email && e.email.toLowerCase() === state.user.email.toLowerCase();
+      html += `<tr class="${isMe?'me':''}"><td class="lb-rank">${i+1}</td><td>${e.name || e.email}${isMe?' (you)':''}</td><td>${e.squadSize}/6</td><td class="lb-points">${e.points}</td></tr>`;
     });
     html += `</tbody></table>`;
   }
@@ -1065,7 +1198,7 @@ function renderCard(p){
   const owned = isOwned(p);
   const slot = slotForRole(p.role);
   const cost = costOf(p);
-  const wouldExceed = (spentTotal() - (owned?cost:0) + cost) > BUDGET_CAP;
+  const wouldExceed = (spentTotal() - (owned?cost:0) + cost) > budgetCap();
   const capped = teamCapReached(p);
   const disable = owned ? false : (!slot || wouldExceed || capped);
   let label = "Draft";
@@ -1119,6 +1252,12 @@ function attachHandlers(){
 
   document.querySelectorAll('[data-action="removeslot"]').forEach(el=>{
     el.addEventListener("click", ()=> removeFromSlot(el.getAttribute("data-slot")));
+  });
+
+  const teamPickSel = document.querySelector('[data-action="teamselect"]');
+  if(teamPickSel) teamPickSel.addEventListener("change", (e)=>{
+    const team = e.target.value;
+    if(team) addTeamToSlot(team);
   });
 
   document.querySelectorAll('[data-action="addplayer"]').forEach(el=>{
@@ -1184,17 +1323,32 @@ function attachHandlers(){
     render();
   });
 
-  // login / logout
-  const loginBtn = document.querySelector('[data-action="login"]');
-  if(loginBtn) loginBtn.addEventListener("click", ()=>{
-    const val = document.getElementById("login-name").value;
-    claimUsername(val);
-  });
-  const loginInput = document.getElementById("login-name");
-  if(loginInput){
-    loginInput.addEventListener("input", (e)=>{ state.loginInput = e.target.value; });
-    loginInput.addEventListener("keydown", (e)=>{ if(e.key === "Enter") claimUsername(e.target.value); });
+  // email auth (signup / login / logout)
+  function submitAuth(){
+    const email = document.getElementById("auth-email").value;
+    const password = document.getElementById("auth-password").value;
+    if(state.authMode === "signup"){
+      const nameEl = document.getElementById("auth-name");
+      signup(email, password, nameEl ? nameEl.value : "");
+    } else {
+      login(email, password);
+    }
   }
+  const authSubmitBtn = document.querySelector('[data-action="auth-submit"]');
+  if(authSubmitBtn) authSubmitBtn.addEventListener("click", submitAuth);
+  ["auth-email","auth-password","auth-name"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const field = id === "auth-email" ? "authEmail" : (id === "auth-password" ? "authPassword" : "authName");
+    el.addEventListener("input", (e)=>{ state[field] = e.target.value; });
+    el.addEventListener("keydown", (e)=>{ if(e.key === "Enter") submitAuth(); });
+  });
+  const authToggleEl = document.querySelector('[data-action="auth-toggle"]');
+  if(authToggleEl) authToggleEl.addEventListener("click", ()=>{
+    state.authMode = state.authMode === "signup" ? "login" : "signup";
+    state.authMsg = "";
+    render();
+  });
   const logoutEl = document.querySelector('[data-action="logout"]');
   if(logoutEl) logoutEl.addEventListener("click", logout);
 
