@@ -1,0 +1,1237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RIFT DRAFT</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Rajdhani:wght@500;600;700&display=swap');
+
+:root{
+  --bg:#080b10;
+  --bg-panel:#0e131b;
+  --bg-panel2:#131a24;
+  --line:#232c38;
+  --teal:#0ac8b9;
+  --teal-dim:#0a8f86;
+  --gold:#c8aa6e;
+  --gold-bright:#f0e6d2;
+  --danger:#e8495f;
+  --text:#cdd6e0;
+  --text-dim:#7c8898;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:transparent;color:var(--text);font-family:'Rajdhani',sans-serif;}
+body{padding:0;}
+.app{
+  background:radial-gradient(ellipse at 50% -10%, #101a22 0%, var(--bg) 55%);
+  border:1px solid var(--line);
+  min-height:100vh;
+  padding-bottom:60px;
+}
+
+/* ---------- HEADER ---------- */
+.header{
+  padding:22px 28px 0 28px;
+  position:relative;
+}
+.brand{
+  display:flex; align-items:baseline; gap:12px;
+  font-family:'Cinzel',serif;
+}
+.brand h1{
+  font-size:26px; letter-spacing:3px; margin:0; font-weight:900;
+  color:var(--gold-bright);
+  text-shadow:0 0 18px rgba(200,170,110,.35);
+}
+.brand .sub{ font-family:'Rajdhani',sans-serif; font-size:12px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase;}
+
+.region-row{ display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; align-items:center; justify-content:space-between;}
+.region-tabs{ display:flex; gap:8px; }
+.region-tab{
+  font-family:'Cinzel',serif; font-weight:700; font-size:13px; letter-spacing:2px;
+  padding:9px 18px; border-radius:3px; cursor:pointer; user-select:none;
+  border:1px solid var(--line); background:var(--bg-panel); color:var(--text-dim);
+  transition:all .15s ease;
+}
+.region-tab:hover{ color:var(--gold-bright); border-color:var(--gold); }
+.region-tab.active{
+  color:#0a0e13; background:linear-gradient(180deg,var(--rc,var(--gold)) 0%, var(--rc-dim,var(--gold-bright)) 100%);
+  border-color:var(--rc,var(--gold));
+  box-shadow:0 0 16px var(--rc,var(--gold));
+}
+.split-select{
+  font-family:'Rajdhani',sans-serif; font-weight:600; font-size:13px; letter-spacing:1px;
+  background:var(--bg-panel); color:var(--text); border:1px solid var(--line); border-radius:3px;
+  padding:9px 12px; cursor:pointer;
+}
+.split-select:focus{ outline:1px solid var(--teal); }
+
+/* ---------- ESSENCE METER ---------- */
+.essence-wrap{ padding:18px 28px 0 28px; }
+.essence-label{ display:flex; justify-content:space-between; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px;}
+.essence-label b{ color:var(--gold-bright); font-weight:700; }
+.essence-bar{
+  height:14px; border-radius:2px; background:var(--bg-panel); border:1px solid var(--line);
+  overflow:hidden; position:relative;
+}
+.essence-fill{
+  height:100%;
+  background:linear-gradient(90deg, var(--teal-dim), var(--teal));
+  box-shadow:0 0 12px var(--teal);
+  transition:width .25s ease, background .25s ease;
+}
+.essence-fill.over{ background:linear-gradient(90deg,#7a1f2b,var(--danger)); box-shadow:0 0 12px var(--danger); }
+
+/* ---------- ROSTER SLOTS ---------- */
+.roster-row{
+  display:grid; grid-template-columns:repeat(6,1fr); gap:10px;
+  padding:18px 28px 0 28px;
+}
+.slot{
+  background:var(--bg-panel); border:1px solid var(--line); border-radius:6px;
+  min-height:132px; padding:10px; position:relative; cursor:default;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+  transition:border-color .15s ease;
+}
+.slot.filled{ border-color:var(--gold); background:linear-gradient(180deg, rgba(200,170,110,.08), transparent); cursor:pointer;}
+.slot.filled:hover{ border-color:var(--danger); }
+.slot .role-tag{ font-size:10px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:6px;}
+.slot .role-icon{ width:26px; height:26px; margin-bottom:6px; opacity:.55;}
+.slot.filled .role-icon{ opacity:.9; }
+.slot .pname{ font-weight:700; font-size:14px; color:var(--gold-bright); line-height:1.15;}
+.slot .pteam{ font-size:11px; color:var(--text-dim); margin-top:2px;}
+.slot .pcost{ margin-top:6px; font-size:12px; font-weight:700; color:var(--teal); }
+.slot .empty-txt{ font-size:11px; color:var(--text-dim); }
+.slot .remove-x{
+  position:absolute; top:6px; right:8px; font-size:12px; color:var(--text-dim); display:none;
+}
+.slot.filled:hover .remove-x{ display:block; color:var(--danger); }
+
+/* ---------- ACTIONS ---------- */
+.actions-row{ display:flex; gap:10px; padding:16px 28px 0 28px; flex-wrap:wrap; align-items:center;}
+.btn{
+  font-family:'Rajdhani',sans-serif; font-weight:700; letter-spacing:1px; font-size:13px;
+  padding:10px 18px; border-radius:3px; border:1px solid var(--line); background:var(--bg-panel);
+  color:var(--text); cursor:pointer; transition:all .15s ease; text-transform:uppercase;
+}
+.btn:hover{ border-color:var(--teal); color:var(--teal); }
+.btn.primary{ background:linear-gradient(180deg,var(--teal),var(--teal-dim)); color:#06141a; border-color:var(--teal); }
+.btn.primary:hover{ filter:brightness(1.1); color:#06141a;}
+.btn.ghost{ background:transparent; }
+.btn:disabled{ opacity:.35; cursor:not-allowed; }
+.save-msg{ font-size:12px; color:var(--teal); letter-spacing:1px; }
+
+/* ---------- FILTER BAR ---------- */
+.filter-bar{
+  display:flex; gap:8px; padding:22px 28px 0 28px; flex-wrap:wrap; align-items:center;
+  border-top:1px solid var(--line); margin-top:20px; padding-top:20px;
+}
+.chip{
+  font-size:12px; letter-spacing:1px; font-weight:600; padding:7px 14px; border-radius:20px;
+  border:1px solid var(--line); background:var(--bg-panel); color:var(--text-dim); cursor:pointer;
+}
+.chip.active{ color:#06141a; background:var(--gold); border-color:var(--gold); }
+.search-input{
+  margin-left:auto; background:var(--bg-panel); border:1px solid var(--line); border-radius:20px;
+  padding:7px 14px; color:var(--text); font-family:'Rajdhani',sans-serif; font-size:13px; min-width:180px;
+}
+.sort-select{
+  background:var(--bg-panel); border:1px solid var(--line); border-radius:20px; color:var(--text-dim);
+  font-family:'Rajdhani',sans-serif; font-size:12px; padding:7px 10px;
+}
+
+/* ---------- PLAYER GRID ---------- */
+.team-block{ padding:22px 28px 0 28px; }
+.team-name{
+  font-family:'Cinzel',serif; font-size:14px; letter-spacing:2px; color:var(--gold);
+  margin-bottom:10px; display:flex; align-items:center; gap:8px;
+}
+.team-name .line{ flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); }
+.player-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px;}
+.pcard{
+  background:var(--bg-panel); border:1px solid var(--line); border-radius:6px; padding:12px;
+  display:flex; flex-direction:column; gap:6px; transition:border-color .15s ease;
+}
+.pcard:hover{ border-color:var(--teal-dim); }
+.pcard.owned{ border-color:var(--gold); background:linear-gradient(180deg, rgba(200,170,110,.07), transparent);}
+.pcard-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+.pcard-name{ font-weight:700; color:var(--gold-bright); font-size:15px; }
+.pcard-role{ font-size:10px; letter-spacing:1.5px; color:var(--text-dim); text-transform:uppercase; }
+.tier-badge{
+  font-size:10px; font-weight:700; padding:2px 7px; border-radius:3px; letter-spacing:1px;
+}
+.tier-S{ background:rgba(232,73,95,.18); color:#ff7a8c; border:1px solid #ff7a8c55;}
+.tier-A{ background:rgba(200,170,110,.18); color:var(--gold-bright); border:1px solid var(--gold);}
+.tier-B{ background:rgba(10,200,185,.14); color:var(--teal); border:1px solid var(--teal-dim);}
+.tier-C{ background:rgba(124,136,152,.14); color:var(--text-dim); border:1px solid var(--line);}
+.pcard-bottom{ display:flex; justify-content:space-between; align-items:center; margin-top:4px;}
+.pcard-cost{ font-weight:700; color:var(--teal); font-size:14px;}
+.pcard-add{
+  font-size:11px; font-weight:700; letter-spacing:1px; padding:5px 12px; border-radius:3px; cursor:pointer;
+  background:var(--bg-panel2); border:1px solid var(--line); color:var(--text);
+}
+.pcard-add:hover:not(:disabled){ border-color:var(--teal); color:var(--teal); }
+.pcard-add:disabled{ opacity:.3; cursor:not-allowed;}
+.pcard-add.remove{ border-color:var(--danger); color:var(--danger); }
+.cost-edit{ width:52px; background:var(--bg-panel2); border:1px solid var(--line); color:var(--gold-bright);
+  font-family:'Rajdhani',sans-serif; font-weight:700; border-radius:3px; padding:2px 4px; font-size:13px;}
+
+/* ---------- EDIT / CUSTOM PANEL ---------- */
+.edit-panel{ padding:20px 28px 0 28px; }
+.edit-note{ font-size:12px; color:var(--text-dim); line-height:1.6; max-width:640px; }
+.add-player-form{
+  display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; align-items:center;
+  background:var(--bg-panel); border:1px solid var(--line); border-radius:6px; padding:12px;
+}
+.add-player-form input, .add-player-form select{
+  background:var(--bg-panel2); border:1px solid var(--line); color:var(--text);
+  font-family:'Rajdhani',sans-serif; padding:7px 10px; border-radius:3px; font-size:13px;
+}
+.add-player-form input[type=text]{ width:130px; }
+.add-player-form input[type=number]{ width:70px; }
+
+.footer-note{ padding:26px 28px 0 28px; font-size:11px; color:var(--text-dim); line-height:1.7; max-width:720px;}
+
+/* ---------- LOGIN / IDENTITY ---------- */
+.login-bar{ display:flex; align-items:center; gap:8px; }
+.login-bar input{
+  background:var(--bg-panel); border:1px solid var(--line); color:var(--text);
+  font-family:'Rajdhani',sans-serif; padding:8px 12px; border-radius:3px; font-size:13px; width:140px;
+}
+.identity-chip{
+  display:flex; align-items:center; gap:8px; background:var(--bg-panel); border:1px solid var(--gold);
+  border-radius:20px; padding:6px 8px 6px 14px; font-size:13px; font-weight:600; color:var(--gold-bright);
+}
+.identity-chip .logout{ font-size:11px; color:var(--text-dim); cursor:pointer; border-left:1px solid var(--line); padding-left:8px; }
+.identity-chip .logout:hover{ color:var(--danger); }
+.login-msg{ font-size:11px; color:var(--danger); }
+
+/* ---------- POINTS BADGE ---------- */
+.points-badge{
+  display:inline-flex; align-items:baseline; gap:6px; margin-left:14px; padding:4px 12px;
+  border:1px solid var(--teal-dim); border-radius:20px; background:rgba(10,200,185,.08);
+}
+.points-badge b{ color:var(--teal); font-size:15px; }
+.points-badge span{ font-size:10px; letter-spacing:1px; color:var(--text-dim); text-transform:uppercase; }
+
+/* ---------- SECTION TABS (Draft / Matches / Leaderboard) ---------- */
+.section-tabs{ display:flex; gap:6px; padding:22px 28px 0 28px; border-top:1px solid var(--line); margin-top:22px; padding-top:18px; }
+.section-tab{
+  font-family:'Cinzel',serif; font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+  padding:8px 16px; cursor:pointer; color:var(--text-dim); border-bottom:2px solid transparent;
+}
+.section-tab.active{ color:var(--gold-bright); border-bottom-color:var(--gold); }
+
+/* ---------- MATCH CENTER ---------- */
+.match-panel{ padding:18px 28px 0 28px; }
+.match-form{
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  background:var(--bg-panel); border:1px solid var(--line); border-radius:6px; padding:14px; margin-bottom:16px;
+}
+.match-form select, .match-form input{
+  background:var(--bg-panel2); border:1px solid var(--line); color:var(--text);
+  font-family:'Rajdhani',sans-serif; padding:7px 10px; border-radius:3px; font-size:13px;
+}
+.match-list{ display:flex; flex-direction:column; gap:8px; }
+.match-row{
+  display:flex; align-items:center; gap:14px; background:var(--bg-panel); border:1px solid var(--line);
+  border-radius:6px; padding:10px 14px; font-size:13px;
+}
+.match-row .mteams{ flex:1; }
+.match-row .winner{ color:var(--teal); font-weight:700; }
+.match-row .mvp{ color:var(--gold-bright); font-size:12px; }
+.match-row .mweek{ color:var(--text-dim); font-size:11px; min-width:70px; }
+.match-row .mdel{ cursor:pointer; color:var(--text-dim); font-size:12px; }
+.match-row .mdel:hover{ color:var(--danger); }
+.rules-note{ font-size:12px; color:var(--text-dim); margin-bottom:14px; line-height:1.6; }
+
+/* ---------- LEADERBOARD ---------- */
+.lb-panel{ padding:18px 28px 0 28px; }
+.lb-table{ width:100%; border-collapse:collapse; }
+.lb-table th{
+  text-align:left; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim);
+  border-bottom:1px solid var(--line); padding:8px 10px; font-weight:600;
+}
+.lb-table td{ padding:10px; border-bottom:1px solid var(--line); font-size:14px; }
+.lb-table tr.me{ background:rgba(200,170,110,.08); }
+.lb-rank{ font-family:'Cinzel',serif; font-weight:700; color:var(--gold); width:36px; }
+.lb-points{ color:var(--teal); font-weight:700; }
+.lb-empty{ color:var(--text-dim); font-size:13px; padding:16px 0; }
+.disclaimer{
+  margin:20px 28px 0 28px; padding:12px 16px; border:1px solid #4a3a1e; background:rgba(200,170,110,.06);
+  border-radius:6px; font-size:12px; color:var(--gold-bright); line-height:1.6;
+}
+
+@media (max-width:720px){
+  .roster-row{ grid-template-columns:repeat(3,1fr); }
+  .header, .essence-wrap, .roster-row, .actions-row, .filter-bar, .team-block, .edit-panel, .footer-note, .disclaimer{ padding-left:14px; padding-right:14px; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* ============================================================
+   STORAGE (localStorage-backed, works when the file is opened
+   directly in a browser — no external storage service needed)
+   ============================================================ */
+const LS_PREFIX = "riftdraft:";
+const storage = {
+  async get(key){
+    try{
+      const raw = localStorage.getItem(LS_PREFIX+key);
+      if(raw === null) return null;
+      return { key, value: raw };
+    }catch(e){ return null; }
+  },
+  async set(key, value){
+    try{
+      localStorage.setItem(LS_PREFIX+key, value);
+      return { key, value };
+    }catch(e){ return null; }
+  },
+  async delete(key){
+    try{
+      localStorage.removeItem(LS_PREFIX+key);
+      return { key, deleted:true };
+    }catch(e){ return null; }
+  },
+  async list(prefix){
+    try{
+      const full = LS_PREFIX+(prefix||"");
+      const keys = [];
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(k && k.indexOf(full)===0) keys.push(k.slice(LS_PREFIX.length));
+      }
+      return { keys, prefix };
+    }catch(e){ return null; }
+  }
+};
+
+/* ============================================================
+   DATA
+   ============================================================ */
+const ROLES = ["TOP","JGL","MID","ADC","SUP"];
+const ROLE_LABEL = {TOP:"Top",JGL:"Jungle",MID:"Mid",ADC:"ADC",SUP:"Support",FLEX:"Flex"};
+
+const ROLE_ICON = {
+  TOP: `<path d="M6 20 L18 8 M14 6 L18 6 L18 10" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+  JGL: `<path d="M12 4 C8 8 6 12 8 18 C9 15 10 14 12 13 C14 14 15 15 16 18 C18 12 16 8 12 4Z" fill="currentColor" opacity=".85"/>`,
+  MID: `<rect x="5" y="6" width="14" height="12" rx="1" stroke="currentColor" stroke-width="2" fill="none"/><line x1="12" y1="6" x2="12" y2="18" stroke="currentColor" stroke-width="1.5"/>`,
+  ADC: `<path d="M4 18 L18 4 M13 4 L18 4 L18 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 18 L8 20 L6 14Z" fill="currentColor"/>`,
+  SUP: `<path d="M12 4 L19 7 V12 C19 16 16 19 12 20 C8 19 5 16 5 12 V7 Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>`,
+  FLEX:`<circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2"/>`
+};
+
+const REGION_META = {
+  LCK: { label:"LCK", color:"#c8aa6e", colorDim:"#8a7448", flag:"KR" },
+  LPL: { label:"LPL", color:"#e0555a", colorDim:"#9a3a3d", flag:"CN" },
+  LEC: { label:"LEC", color:"#4d8fe0", colorDim:"#33608f", flag:"EU" }
+};
+
+const TIER_COST = { S:30, A:18, B:11, C:6 };
+const MAX_PER_TEAM = 2;
+
+// id helper
+function pid(region, team, name){ return (region+"-"+team+"-"+name).toLowerCase().replace(/[^a-z0-9]+/g,"-"); }
+
+function mkPlayer(region, team, role, name, tier){
+  return { id: pid(region,team,name), region, team, role, name, tier, baseCost: TIER_COST[tier] };
+}
+
+const RAW_DATA = {
+  LCK: [
+    { team:"Gen.G", players:[
+      ["TOP","Kiin","A"], ["JGL","Canyon","S"], ["MID","Chovy","S"], ["ADC","Ruler","S"], ["SUP","Duro","A"]
+    ]},
+    { team:"T1", players:[
+      ["TOP","Doran","A"], ["JGL","Oner","A"], ["MID","Faker","S"], ["ADC","Peyz","A"], ["SUP","Keria","S"]
+    ]},
+    { team:"Dplus KIA", players:[
+      ["TOP","Siwoo","B"], ["JGL","Lucid","B"], ["MID","ShowMaker","A"], ["ADC","Smash","B"], ["SUP","Career","C"]
+    ]},
+    { team:"Hanwha Life Esports", players:[
+      ["TOP","Zeus","S"], ["JGL","Kanavi","S"], ["MID","Zeka","A"], ["ADC","Gumayusi","S"], ["SUP","Delight","B"]
+    ]},
+    { team:"KT Rolster", players:[
+      ["TOP","PerfecT","B"], ["JGL","Cuzz","B"], ["MID","Bdd","A"], ["ADC","FenRir","B"], ["SUP","Effort","A"]
+    ]},
+    { team:"Nongshim RedForce", players:[
+      ["TOP","Kingen","B"], ["JGL","Sponge","B"], ["MID","Scout","A"], ["ADC","Diable","C"], ["SUP","Lehends","A"]
+    ]},
+    { team:"BNK FEARX", players:[
+      ["TOP","Clear","B"], ["JGL","Raptor","B"], ["MID","VicLa","B"], ["ADC","Taeyoon","B"], ["SUP","Kellin","B"]
+    ]},
+    { team:"DN SOOPers", players:[
+      ["TOP","DuDu","B"], ["JGL","Sharvel","C"], ["MID","Clozer","B"], ["ADC","Deokdam","A"], ["SUP","Peter","B"]
+    ]},
+    { team:"HANJIN BRION", players:[
+      ["TOP","Casting","C"], ["JGL","GIDEON","C"], ["MID","Roamer","B"], ["ADC","Teddy","A"], ["SUP","Namgung","C"]
+    ]},
+    { team:"Kiwoom DRX", players:[
+      ["TOP","Frog","C"], ["JGL","Willer","C"], ["MID","Ucal","B"], ["ADC","Aiming","B"], ["SUP","Andil","B"]
+    ]}
+  ],
+  LPL: [
+    { team:"Anyone's Legend", players:[
+      ["TOP","Breathe","B"], ["JGL","Tarzan","A"], ["MID","Shanks","B"], ["ADC","Hope","B"], ["SUP","Kael","B"]
+    ]},
+    { team:"Bilibili Gaming", players:[
+      ["TOP","Wenbo","B"], ["JGL","Xun","A"], ["MID","Knight","S"], ["ADC","Viper","S"], ["SUP","ON","B"]
+    ]},
+    { team:"EDward Gaming", players:[
+      ["TOP","Zdz","B"], ["JGL","Xiaohao","B"], ["MID","BuLLDoG","B"], ["ADC","Leave","B"], ["SUP","Parukia","B"]
+    ]},
+    { team:"Invictus Gaming", players:[
+      ["TOP","TheShy","A"], ["JGL","Wei","A"], ["MID","Rookie","A"], ["ADC","Assum","B"], ["SUP","Meiko","A"]
+    ]},
+    { team:"JD Gaming", players:[
+      ["TOP","Xiaoxu","B"], ["JGL","Junjia","B"], ["MID","HongQ","B"], ["ADC","GALA","A"], ["SUP","Vampire","B"]
+    ]},
+    { team:"LGD Gaming", players:[
+      ["TOP","Burdol","B"], ["JGL","Heng","B"], ["MID","Tangyuan","B"], ["ADC","Shaoye","B"], ["SUP","Crisp","C"]
+    ]},
+    { team:"LNG Esports", players:[
+      ["TOP","Sheer","B"], ["JGL","Weiwei","C"], ["MID","Nia","C"], ["ADC","1xn","B"], ["SUP","Ycx","C"]
+    ]},
+    { team:"Ninjas in Pyjamas", players:[
+      ["TOP","HOYA","C"], ["JGL","Guwon","C"], ["MID","Care","C"], ["ADC","Photic","B"], ["SUP","Fengyue","C"]
+    ]},
+    { team:"Oh My God", players:[
+      ["TOP","Hery","B"], ["JGL","re0","C"], ["MID","haichao","B"], ["ADC","Starry","A"], ["SUP","Moham","B"]
+    ]},
+    { team:"Top Esports", players:[
+      ["TOP","ZUIAN","B"], ["JGL","Tian","A"], ["MID","Creme","B"], ["ADC","JackeyLove","A"], ["SUP","Zhuo","B"]
+    ]},
+    { team:"ThunderTalk Gaming", players:[
+      ["TOP","Keshi","C"], ["JGL","Junhao","C"], ["MID","Heru","C"], ["ADC","Ahn","C"], ["SUP","Feather","C"]
+    ]},
+    { team:"Ultra Prime", players:[
+      ["TOP","sasi","B"], ["JGL","climber","C"], ["MID","Saber","B"], ["ADC","Hena","C"], ["SUP","Xiaoxia","C"]
+    ]},
+    { team:"Weibo Gaming", players:[
+      ["TOP","Zika","B"], ["JGL","jiejie","A"], ["MID","Xiaohu","A"], ["ADC","Elk","A"], ["SUP","Jwei","B"]
+    ]},
+    { team:"Team WE", players:[
+      ["TOP","Cube","B"], ["JGL","Monki","B"], ["MID","Karis","B"], ["ADC","About","C"], ["SUP","Erha","B"]
+    ]}
+  ],
+  LEC: [
+    { team:"G2 Esports", players:[
+      ["TOP","BrokenBlade","A"], ["JGL","SkewMond","B"], ["MID","Caps","S"], ["ADC","Hans Sama","A"], ["SUP","Labrov","A"]
+    ]},
+    { team:"Fnatic", players:[
+      ["TOP","Soboro","A"], ["JGL","Razork","A"], ["MID","Vladi","B"], ["ADC","Upset","A"], ["SUP","Lospa","B"]
+    ]},
+    { team:"Movistar KOI", players:[
+      ["TOP","Myrwn","B"], ["JGL","Elyoya","A"], ["MID","Jojopyun","A"], ["ADC","Supa","B"], ["SUP","Alvaro","C"]
+    ]},
+    { team:"GIANTX", players:[
+      ["TOP","Lot","B"], ["JGL","ISMA","B"], ["MID","Jackies","B"], ["ADC","Flakked","B"], ["SUP","Jun","B"]
+    ]},
+    { team:"Karmine Corp", players:[
+      ["TOP","Canna","B"], ["JGL","Yike","B"], ["MID","kyeahoo","B"], ["ADC","Caliste","B"], ["SUP","Busio","A"]
+    ]},
+    { team:"Team Vitality", players:[
+      ["TOP","Naak Nako","B"], ["JGL","Lyncas","B"], ["MID","FIESTA","B"], ["ADC","Carzzy","A"], ["SUP","Fleshy","B"]
+    ]},
+    { team:"Team Heretics", players:[
+      ["TOP","Tracyn","C"], ["JGL","Daglas","B"], ["MID","Serin","B"], ["ADC","Hype","B"], ["SUP","Way","B"]
+    ]},
+    { team:"Shifters", players:[
+      ["TOP","Rooster","B"], ["JGL","Sheo","A"], ["MID","nuc","B"], ["ADC","Paduck","B"], ["SUP","Stend","B"]
+    ]},
+    { team:"SK Gaming", players:[
+      ["TOP","Wunder","A"], ["JGL","Skeanz","B"], ["MID","SlowQ","B"], ["ADC","Jopa","C"], ["SUP","Mikyx","A"]
+    ]},
+    { team:"Natus Vincere", players:[
+      ["TOP","Maynter","C"], ["JGL","Rhilech","C"], ["MID","Poby","B"], ["ADC","SamD","B"], ["SUP","Parus","C"]
+    ]}
+  ]
+};
+
+function buildRegionData(){
+  const out = {};
+  for(const region in RAW_DATA){
+    out[region] = [];
+    RAW_DATA[region].forEach(t=>{
+      out[region].push({
+        team: t.team,
+        players: t.players.map(([role,name,tier]) => mkPlayer(region, t.team, role, name, tier))
+      });
+    });
+  }
+  return out;
+}
+const DATA = buildRegionData();
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const SPLITS = ["2026 Summer","2026 Spring","2027 Spring"];
+const BUDGET_CAP = 100;
+const POINTS_WIN = 3;
+const POINTS_MVP = 5;
+
+let state = {
+  region: "LCK",
+  split: "2026 Summer",
+  roster: { TOP:null, JGL:null, MID:null, ADC:null, SUP:null, FLEX:null },
+  filterRole: "ALL",
+  search: "",
+  sort: "team",
+  overrides: {},   // playerId -> cost override
+  editMode: false,
+  customPlayers: [], // {id,region,team,role,name,tier,baseCost}
+  saveMsg: "",
+  section: "draft",  // draft | matches | leaderboard
+  username: null,
+  authToken: null,
+  loginInput: "",
+  loginMsg: "",
+  matches: [],       // for current region+split: {id,week,team1,team2,winner,mvpId,mvpName}
+  matchForm: { week:"", team1:"", team2:"", winner:"", mvpId:"" },
+  leaderboard: []     // [{username, points, updatedAt}]
+};
+
+function costOf(p){
+  if(state.overrides[p.id] !== undefined) return state.overrides[p.id];
+  return p.baseCost;
+}
+
+function allPlayersForRegion(region){
+  const base = [];
+  DATA[region].forEach(t => t.players.forEach(p => base.push(p)));
+  const custom = state.customPlayers.filter(p => p.region === region);
+  return base.concat(custom);
+}
+
+function teamsForRegion(region){
+  const map = {};
+  allPlayersForRegion(region).forEach(p=>{
+    if(!map[p.team]) map[p.team] = [];
+    map[p.team].push(p);
+  });
+  return map;
+}
+
+function rosterKey(){ return "roster:"+state.region+":"+state.split; }
+function overridesKey(){ return "cost-overrides"; }
+function customKey(){ return "custom-players"; }
+function matchesKey(){ return "matches:"+state.region+":"+state.split; }
+function identityKey(){ return "my-identity"; }
+function lastViewKey(){ return "last-view"; }
+function claimKey(name){ return "identity:"+name.toLowerCase(); }
+function leaderboardKey(username){ return "leaderboard:"+state.region+":"+state.split+":"+username.toLowerCase(); }
+function leaderboardPrefix(){ return "leaderboard:"+state.region+":"+state.split+":"; }
+
+function pointsForRoster(roster, matches){
+  let pts = 0;
+  const owned = Object.values(roster).filter(Boolean);
+  owned.forEach(p=>{
+    matches.forEach(m=>{
+      if(m.winner && p.team === m.winner) pts += POINTS_WIN;
+      if(m.mvpId && p.id === m.mvpId) pts += POINTS_MVP;
+    });
+  });
+  return pts;
+}
+
+function myPoints(){
+  return pointsForRoster(state.roster, state.matches);
+}
+
+function spentTotal(){
+  let sum = 0;
+  ROLES.concat(["FLEX"]).forEach(r=>{
+    const p = state.roster[r];
+    if(p) sum += costOf(p);
+  });
+  return sum;
+}
+
+function findPlayerById(id){
+  for(const region in DATA){
+    for(const t of DATA[region]){
+      const f = t.players.find(p=>p.id===id);
+      if(f) return f;
+    }
+  }
+  return state.customPlayers.find(p=>p.id===id) || null;
+}
+
+/* ============================================================
+   PERSISTENCE
+   ============================================================ */
+async function loadAll(){
+  try{
+    const lv = await storage.get(lastViewKey());
+    if(lv && lv.value){
+      const parsed = JSON.parse(lv.value);
+      if(parsed.region && REGION_META[parsed.region]) state.region = parsed.region;
+      if(parsed.split && SPLITS.includes(parsed.split)) state.split = parsed.split;
+    }
+  }catch(e){}
+  try{
+    const ov = await storage.get(overridesKey());
+    if(ov && ov.value) state.overrides = JSON.parse(ov.value);
+  }catch(e){}
+  try{
+    const cp = await storage.get(customKey());
+    if(cp && cp.value) state.customPlayers = JSON.parse(cp.value);
+  }catch(e){}
+  try{
+    const id = await storage.get(identityKey());
+    if(id && id.value){
+      const parsed = JSON.parse(id.value);
+      state.username = parsed.username;
+      state.authToken = parsed.token;
+    }
+  }catch(e){}
+  await loadRoster();
+  await loadMatches();
+  await loadLeaderboard();
+  await syncLeaderboard();
+}
+
+async function saveLastView(){
+  try{ await storage.set(lastViewKey(), JSON.stringify({ region: state.region, split: state.split })); }catch(e){}
+}
+
+async function loadRoster(){
+  state.roster = { TOP:null, JGL:null, MID:null, ADC:null, SUP:null, FLEX:null };
+  try{
+    const r = await storage.get(rosterKey());
+    if(r && r.value){
+      const ids = JSON.parse(r.value);
+      Object.keys(ids).forEach(slot=>{
+        if(ids[slot]){
+          const p = findPlayerById(ids[slot]);
+          if(p) state.roster[slot] = p;
+        }
+      });
+    }
+  }catch(e){}
+}
+
+async function saveRoster(){
+  const ids = {};
+  Object.keys(state.roster).forEach(slot=>{
+    ids[slot] = state.roster[slot] ? state.roster[slot].id : null;
+  });
+  try{
+    const result = await storage.set(rosterKey(), JSON.stringify(ids));
+    if(result){
+      state.saveMsg = "Squad saved for "+state.region+" — "+state.split;
+    } else {
+      state.saveMsg = "Save failed — try again.";
+    }
+  }catch(e){
+    state.saveMsg = "Save failed — try again.";
+  }
+  await saveLastView();
+  await syncLeaderboard();
+  render();
+  setTimeout(()=>{ state.saveMsg=""; render(); }, 3000);
+}
+
+async function clearRoster(){
+  state.roster = { TOP:null, JGL:null, MID:null, ADC:null, SUP:null, FLEX:null };
+  try{ await storage.set(rosterKey(), JSON.stringify({TOP:null,JGL:null,MID:null,ADC:null,SUP:null,FLEX:null})); }catch(e){}
+  await syncLeaderboard();
+  render();
+}
+
+async function saveOverrides(){
+  try{ await storage.set(overridesKey(), JSON.stringify(state.overrides)); }catch(e){}
+}
+async function saveCustom(){
+  try{ await storage.set(customKey(), JSON.stringify(state.customPlayers)); }catch(e){}
+}
+
+/* ---------- IDENTITY / LOGIN ---------- */
+function genToken(){
+  if(window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+  return "tok-"+Math.random().toString(36).slice(2)+Date.now();
+}
+
+async function claimUsername(name){
+  name = (name||"").trim();
+  state.loginMsg = "";
+  if(!name){ state.loginMsg = "Enter a name first."; render(); return; }
+  if(name.length > 20){ state.loginMsg = "Keep it under 20 characters."; render(); return; }
+  try{
+    let taken = null;
+    try{ taken = await storage.get(claimKey(name), true); }catch(e){ taken = null; }
+    const myToken = genToken();
+    if(taken && taken.value){
+      const parsed = JSON.parse(taken.value);
+      if(parsed.token && (!state.authToken || parsed.token !== state.authToken)){
+        state.loginMsg = "That name is already taken — try another.";
+        render();
+        return;
+      }
+    }
+    const token = (taken && taken.value ? JSON.parse(taken.value).token : myToken);
+    await storage.set(claimKey(name), JSON.stringify({ token }), true);
+    await storage.set(identityKey(), JSON.stringify({ username: name, token }));
+    state.username = name;
+    state.authToken = token;
+    state.loginInput = "";
+    await syncLeaderboard();
+  }catch(e){
+    state.loginMsg = "Couldn't reach storage — try again.";
+  }
+  render();
+}
+
+function logout(){
+  state.username = null;
+  state.authToken = null;
+  try{ storage.delete(identityKey()); }catch(e){}
+  render();
+}
+
+/* ---------- MATCH CENTER ---------- */
+async function loadMatches(){
+  state.matches = [];
+  try{
+    const m = await storage.get(matchesKey(), true);
+    if(m && m.value) state.matches = JSON.parse(m.value);
+  }catch(e){}
+}
+
+async function saveMatches(){
+  try{ await storage.set(matchesKey(), JSON.stringify(state.matches), true); }catch(e){}
+}
+
+async function addMatch(){
+  const f = state.matchForm;
+  if(!f.team1 || !f.team2 || !f.winner || f.team1 === f.team2) return;
+  const match = {
+    id: "m-"+Date.now()+"-"+Math.random().toString(36).slice(2,6),
+    week: f.week || "",
+    team1: f.team1, team2: f.team2, winner: f.winner,
+    mvpId: f.mvpId || null,
+    mvpName: f.mvpId ? (findPlayerById(f.mvpId) ? findPlayerById(f.mvpId).name : "") : ""
+  };
+  state.matches.push(match);
+  await saveMatches();
+  state.matchForm = { week:"", team1:"", team2:"", winner:"", mvpId:"" };
+  await syncLeaderboard();
+  render();
+}
+
+async function deleteMatch(id){
+  state.matches = state.matches.filter(m=>m.id!==id);
+  await saveMatches();
+  await syncLeaderboard();
+  render();
+}
+
+/* ---------- LEADERBOARD ---------- */
+async function syncLeaderboard(){
+  if(!state.username) return;
+  const pts = myPoints();
+  try{
+    await storage.set(leaderboardKey(state.username), JSON.stringify({
+      username: state.username, points: pts, squadSize: Object.values(state.roster).filter(Boolean).length,
+      updatedAt: Date.now()
+    }), true);
+  }catch(e){}
+  await loadLeaderboard();
+}
+
+async function loadLeaderboard(){
+  state.leaderboard = [];
+  try{
+    const list = await storage.list(leaderboardPrefix(), true);
+    if(list && list.keys && list.keys.length){
+      const entries = [];
+      for(const k of list.keys){
+        try{
+          const v = await storage.get(k, true);
+          if(v && v.value) entries.push(JSON.parse(v.value));
+        }catch(e){}
+      }
+      entries.sort((a,b)=> b.points - a.points);
+      state.leaderboard = entries;
+    }
+  }catch(e){}
+}
+
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+function slotForRole(role){
+  // starter slot if empty, else flex if empty and role differs
+  if(!state.roster[role]) return role;
+  if(!state.roster.FLEX) return "FLEX";
+  return null;
+}
+
+function isOwned(p){
+  return Object.values(state.roster).some(x => x && x.id === p.id);
+}
+
+function countFromTeam(team){
+  return Object.values(state.roster).filter(x => x && x.team === team).length;
+}
+
+function teamCapReached(p){
+  return !isOwned(p) && countFromTeam(p.team) >= MAX_PER_TEAM;
+}
+
+function addPlayer(p){
+  const slot = slotForRole(p.role);
+  if(!slot) return;
+  const newSpent = spentTotal() + costOf(p);
+  if(newSpent > BUDGET_CAP) return;
+  if(teamCapReached(p)) return;
+  state.roster[slot] = p;
+  render();
+}
+
+function removeFromSlot(slot){
+  state.roster[slot] = null;
+  render();
+}
+
+function removePlayerEverywhere(p){
+  Object.keys(state.roster).forEach(slot=>{
+    if(state.roster[slot] && state.roster[slot].id === p.id) state.roster[slot] = null;
+  });
+  render();
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function renderLoginWidget(){
+  if(state.username){
+    return `<div class="identity-chip">Playing as <b>${state.username}</b><span class="logout" data-action="logout">log out</span></div>`;
+  }
+  return `
+    <div class="login-bar">
+      <input type="text" placeholder="Choose a name" id="login-name" value="${state.loginInput}">
+      <button class="btn primary" data-action="login">Log In</button>
+      ${state.loginMsg ? `<span class="login-msg">${state.loginMsg}</span>` : ""}
+    </div>`;
+}
+
+function svgIcon(role, size){
+  size = size || 26;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" class="role-icon">${ROLE_ICON[role]}</svg>`;
+}
+
+function render(){
+  const meta = REGION_META[state.region];
+  const root = document.getElementById("root");
+  const spent = spentTotal();
+  const pct = Math.min(100, (spent/BUDGET_CAP)*100);
+  const over = spent > BUDGET_CAP;
+  const filledCount = Object.values(state.roster).filter(Boolean).length;
+
+  let html = `<div class="app" style="--rc:${meta.color};--rc-dim:${meta.colorDim}">`;
+
+  // header
+  html += `
+    <div class="header">
+      <div class="brand" style="justify-content:space-between; display:flex; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:baseline; gap:12px;"><h1>RIFT DRAFT</h1><span class="sub">Fantasy League of Legends — Regional Split Builder</span></div>
+        ${renderLoginWidget()}
+      </div>
+      <div class="region-row">
+        <div class="region-tabs">
+          ${["LCK","LPL","LEC"].map(r=>`<div class="region-tab ${r===state.region?'active':''}" data-action="region" data-region="${r}">${REGION_META[r].label}</div>`).join("")}
+        </div>
+        <select class="split-select" data-action="split">
+          ${SPLITS.map(s=>`<option value="${s}" ${s===state.split?'selected':''}>${s}</option>`).join("")}
+        </select>
+      </div>
+    </div>`;
+
+  // essence meter
+  html += `
+    <div class="essence-wrap">
+      <div class="essence-label"><span>Blue Essence Cap</span><b>${spent} / ${BUDGET_CAP}${over?' — OVER CAP':''}</b></div>
+      <div class="essence-bar"><div class="essence-fill ${over?'over':''}" style="width:${pct}%"></div></div>
+      <div class="essence-label" style="margin-top:6px;">
+        <span>Max ${MAX_PER_TEAM} players per club</span>
+        <span class="points-badge"><b>${myPoints()}</b><span>Squad Points</span></span>
+      </div>
+    </div>`;
+
+  // roster slots
+  html += `<div class="roster-row">`;
+  ["TOP","JGL","MID","ADC","SUP","FLEX"].forEach(slot=>{
+    const p = state.roster[slot];
+    if(p){
+      html += `
+        <div class="slot filled" data-action="removeslot" data-slot="${slot}" title="Click to remove">
+          <span class="remove-x">✕ remove</span>
+          <div class="role-tag">${ROLE_LABEL[slot]}${slot==='FLEX'?' · '+p.role:''}</div>
+          ${svgIcon(p.role)}
+          <div class="pname">${p.name}</div>
+          <div class="pteam">${p.team}</div>
+          <div class="pcost">${costOf(p)} BE</div>
+        </div>`;
+    } else {
+      html += `
+        <div class="slot">
+          <div class="role-tag">${ROLE_LABEL[slot]}</div>
+          ${svgIcon(slot)}
+          <div class="empty-txt">Empty</div>
+        </div>`;
+    }
+  });
+  html += `</div>`;
+
+  // actions
+  html += `
+    <div class="actions-row">
+      <button class="btn primary" data-action="save" ${filledCount===0||over?'disabled':''}>Save Squad</button>
+      <button class="btn ghost" data-action="clear">Clear Roster</button>
+      <button class="btn ${state.editMode?'primary':''}" data-action="edit">${state.editMode? 'Done Editing':'Edit Roster Data'}</button>
+      <span class="save-msg">${state.saveMsg}</span>
+    </div>`;
+
+  if(over){
+    html += `<div class="disclaimer" style="border-color:#5a2430;background:rgba(232,73,95,.08);color:#ff9aa8;">You're over the Blue Essence cap by ${spent-BUDGET_CAP}. Remove a player before saving.</div>`;
+  }
+
+  if(state.editMode){
+    html += `
+      <div class="edit-panel">
+        <div class="edit-note">Pro rosters change every split — the starting dataset here is a best-effort snapshot and may drift from the live lineups. Adjust any player's credit cost below, or add players who are missing (transfers, rookies, substitutes). Your edits are saved and apply across all regions/splits.</div>
+        <div class="add-player-form">
+          <input type="text" placeholder="Player name" id="np-name">
+          <input type="text" placeholder="Team" id="np-team">
+          <select id="np-role">${ROLES.map(r=>`<option value="${r}">${ROLE_LABEL[r]}</option>`).join("")}</select>
+          <select id="np-tier">${Object.keys(TIER_COST).map(t=>`<option value="${t}">${t} tier</option>`).join("")}</select>
+          <input type="number" id="np-cost" placeholder="Cost" min="1" max="30">
+          <button class="btn primary" data-action="addcustom">Add Player</button>
+        </div>
+      </div>`;
+  }
+
+  // section tabs
+  html += `
+    <div class="section-tabs">
+      <div class="section-tab ${state.section==='draft'?'active':''}" data-action="section" data-section="draft">Draft Pool</div>
+      <div class="section-tab ${state.section==='matches'?'active':''}" data-action="section" data-section="matches">Match Center</div>
+      <div class="section-tab ${state.section==='leaderboard'?'active':''}" data-action="section" data-section="leaderboard">Leaderboard</div>
+    </div>`;
+
+  if(state.section === "draft"){
+    // filter bar
+    html += `
+      <div class="filter-bar">
+        ${["ALL"].concat(ROLES).map(r=>`<div class="chip ${state.filterRole===r?'active':''}" data-action="filter" data-role="${r}">${r==='ALL'?'All Roles':ROLE_LABEL[r]}</div>`).join("")}
+        <select class="sort-select" data-action="sort">
+          <option value="team" ${state.sort==='team'?'selected':''}>Sort: Team</option>
+          <option value="cost-desc" ${state.sort==='cost-desc'?'selected':''}>Sort: Cost (High→Low)</option>
+          <option value="cost-asc" ${state.sort==='cost-asc'?'selected':''}>Sort: Cost (Low→High)</option>
+          <option value="name" ${state.sort==='name'?'selected':''}>Sort: Name</option>
+        </select>
+        <input class="search-input" type="text" placeholder="Search player or team..." value="${state.search}" data-action="search">
+      </div>`;
+
+    // player list
+    const teams = teamsForRegion(state.region);
+    let teamNames = Object.keys(teams);
+
+    if(state.sort === "team"){
+      html += teamNames.map(tn => renderTeamBlock(tn, teams[tn], meta)).join("");
+    } else {
+      let flat = [];
+      teamNames.forEach(tn => teams[tn].forEach(p => flat.push(p)));
+      flat = filterPlayers(flat);
+      if(state.sort==="cost-desc") flat.sort((a,b)=>costOf(b)-costOf(a));
+      if(state.sort==="cost-asc") flat.sort((a,b)=>costOf(a)-costOf(b));
+      if(state.sort==="name") flat.sort((a,b)=>a.name.localeCompare(b.name));
+      html += `<div class="team-block"><div class="player-grid">${flat.map(p=>renderCard(p)).join("")}</div></div>`;
+    }
+  } else if(state.section === "matches"){
+    html += renderMatchPanel(meta);
+  } else if(state.section === "leaderboard"){
+    html += renderLeaderboardPanel();
+  }
+
+  html += `
+    <div class="footer-note">Win points (+${POINTS_WIN}) are awarded to every rostered player whose real-world club wins a logged match; MVP points (+${POINTS_MVP}) go to whichever player is tagged MVP for that match. Match results are entered by hand in the Match Center — there's no live official results feed wired in, so keep it up to date as the split plays out. All data (squads, matches, custom players, edits) is saved in this browser's local storage on this device — nothing is sent anywhere, and clearing your browser data will reset it.</div>
+  </div>`;
+
+  root.innerHTML = html;
+  attachHandlers();
+}
+
+function filterPlayers(list){
+  let out = list;
+  if(state.filterRole !== "ALL") out = out.filter(p=>p.role===state.filterRole);
+  if(state.search.trim()){
+    const q = state.search.trim().toLowerCase();
+    out = out.filter(p=> p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q));
+  }
+  return out;
+}
+
+function renderMatchPanel(meta){
+  const teamNames = Object.keys(teamsForRegion(state.region)).sort();
+  const f = state.matchForm;
+  const candidateTeams = [f.team1, f.team2].filter(Boolean);
+  const mvpCandidates = candidateTeams.length
+    ? allPlayersForRegion(state.region).filter(p => candidateTeams.includes(p.team))
+    : [];
+
+  let html = `<div class="match-panel">`;
+  html += `<div class="rules-note">Log each match's winner and (optionally) its MVP. Points apply automatically to everyone's saved squads for ${state.region} — ${state.split}.</div>`;
+  html += `
+    <div class="match-form">
+      <input type="text" id="mf-week" placeholder="Week / Day" value="${f.week}" style="width:100px;">
+      <select id="mf-team1">
+        <option value="">Team A</option>
+        ${teamNames.map(t=>`<option value="${t}" ${f.team1===t?'selected':''}>${t}</option>`).join("")}
+      </select>
+      <select id="mf-team2">
+        <option value="">Team B</option>
+        ${teamNames.map(t=>`<option value="${t}" ${f.team2===t?'selected':''}>${t}</option>`).join("")}
+      </select>
+      <select id="mf-winner">
+        <option value="">Winner</option>
+        ${candidateTeams.map(t=>`<option value="${t}" ${f.winner===t?'selected':''}>${t}</option>`).join("")}
+      </select>
+      <select id="mf-mvp">
+        <option value="">MVP (optional)</option>
+        ${mvpCandidates.map(p=>`<option value="${p.id}" ${f.mvpId===p.id?'selected':''}>${p.name} (${p.team})</option>`).join("")}
+      </select>
+      <button class="btn primary" data-action="addmatch" ${(!f.team1||!f.team2||!f.winner||f.team1===f.team2)?'disabled':''}>Log Match</button>
+    </div>`;
+
+  if(state.matches.length === 0){
+    html += `<div class="lb-empty">No matches logged yet for this split.</div>`;
+  } else {
+    const sorted = state.matches.slice().reverse();
+    html += `<div class="match-list">`;
+    sorted.forEach(m=>{
+      html += `
+        <div class="match-row">
+          <span class="mweek">${m.week || "—"}</span>
+          <span class="mteams">${m.team1} <span style="color:var(--text-dim)">vs</span> ${m.team2} — <span class="winner">${m.winner} won</span></span>
+          <span class="mvp">${m.mvpName ? "MVP: "+m.mvpName : ""}</span>
+          <span class="mdel" data-action="delmatch" data-id="${m.id}">✕ remove</span>
+        </div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function renderLeaderboardPanel(){
+  let html = `<div class="lb-panel">`;
+  html += `<div class="rules-note">Ranking for ${state.region} — ${state.split}. Log in and save a squad to appear here; your points update automatically whenever you save your roster or matches change. Everything is saved locally in this browser, so this leaderboard only shows squads you've saved from this device.</div>`;
+  if(state.leaderboard.length === 0){
+    html += `<div class="lb-empty">No one has saved a squad for this region and split yet.</div>`;
+  } else {
+    html += `<table class="lb-table"><thead><tr><th>#</th><th>Manager</th><th>Squad Size</th><th>Points</th></tr></thead><tbody>`;
+    state.leaderboard.forEach((e,i)=>{
+      const isMe = state.username && e.username.toLowerCase() === state.username.toLowerCase();
+      html += `<tr class="${isMe?'me':''}"><td class="lb-rank">${i+1}</td><td>${e.username}${isMe?' (you)':''}</td><td>${e.squadSize}/6</td><td class="lb-points">${e.points}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function renderTeamBlock(teamName, players, meta){
+  let list = filterPlayers(players);
+  if(state.sort==="cost-desc") list = list.slice().sort((a,b)=>costOf(b)-costOf(a));
+  if(state.sort==="cost-asc") list = list.slice().sort((a,b)=>costOf(a)-costOf(b));
+  if(state.sort==="name") list = list.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  if(list.length===0) return "";
+  return `
+    <div class="team-block">
+      <div class="team-name">${teamName}<span class="line"></span></div>
+      <div class="player-grid">${list.map(p=>renderCard(p)).join("")}</div>
+    </div>`;
+}
+
+function renderCard(p){
+  const owned = isOwned(p);
+  const slot = slotForRole(p.role);
+  const cost = costOf(p);
+  const wouldExceed = (spentTotal() - (owned?cost:0) + cost) > BUDGET_CAP;
+  const capped = teamCapReached(p);
+  const disable = owned ? false : (!slot || wouldExceed || capped);
+  let label = "Draft";
+  if(owned) label = "Drop";
+  else if(!slot) label = "Full";
+  else if(capped) label = `Max ${MAX_PER_TEAM}/club`;
+  else if(wouldExceed) label = "Over cap";
+  return `
+    <div class="pcard ${owned?'owned':''}">
+      <div class="pcard-top">
+        <div>
+          <div class="pcard-name">${p.name}</div>
+          <div class="pcard-role">${p.team} · ${ROLE_LABEL[p.role]}</div>
+        </div>
+        <span class="tier-badge tier-${p.tier}">${p.tier}</span>
+      </div>
+      <div class="pcard-bottom">
+        ${state.editMode
+          ? `<input class="cost-edit" type="number" value="${cost}" data-action="editcost" data-id="${p.id}">`
+          : `<div class="pcard-cost">${cost} BE</div>`}
+        <button class="pcard-add ${owned?'remove':''}" data-action="${owned?'removeplayer':'addplayer'}" data-id="${p.id}" ${disable?'disabled':''}>
+          ${label}
+        </button>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+function attachHandlers(){
+  document.querySelectorAll('[data-action="region"]').forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      state.region = el.getAttribute("data-region");
+      await saveLastView();
+      await loadRoster();
+      await loadMatches();
+      await loadLeaderboard();
+      render();
+    });
+  });
+  const splitSel = document.querySelector('[data-action="split"]');
+  if(splitSel) splitSel.addEventListener("change", async (e)=>{
+    state.split = e.target.value;
+    await saveLastView();
+    await loadRoster();
+    await loadMatches();
+    await loadLeaderboard();
+    render();
+  });
+
+  document.querySelectorAll('[data-action="removeslot"]').forEach(el=>{
+    el.addEventListener("click", ()=> removeFromSlot(el.getAttribute("data-slot")));
+  });
+
+  document.querySelectorAll('[data-action="addplayer"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const p = findPlayerById(el.getAttribute("data-id"));
+      if(p) addPlayer(p);
+    });
+  });
+  document.querySelectorAll('[data-action="removeplayer"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const p = findPlayerById(el.getAttribute("data-id"));
+      if(p) removePlayerEverywhere(p);
+    });
+  });
+
+  const saveBtn = document.querySelector('[data-action="save"]');
+  if(saveBtn) saveBtn.addEventListener("click", saveRoster);
+  const clearBtn = document.querySelector('[data-action="clear"]');
+  if(clearBtn) clearBtn.addEventListener("click", clearRoster);
+  const editBtn = document.querySelector('[data-action="edit"]');
+  if(editBtn) editBtn.addEventListener("click", ()=>{ state.editMode = !state.editMode; render(); });
+
+  document.querySelectorAll('[data-action="filter"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.filterRole = el.getAttribute("data-role"); render(); });
+  });
+  const sortSel = document.querySelector('[data-action="sort"]');
+  if(sortSel) sortSel.addEventListener("change", (e)=>{ state.sort = e.target.value; render(); });
+  const searchInput = document.querySelector('[data-action="search"]');
+  if(searchInput){
+    searchInput.addEventListener("input", (e)=>{
+      state.search = e.target.value;
+      const pos = e.target.selectionStart;
+      render();
+      const again = document.querySelector('[data-action="search"]');
+      if(again){ again.focus(); again.setSelectionRange(pos,pos); }
+    });
+  }
+
+  document.querySelectorAll('[data-action="editcost"]').forEach(el=>{
+    el.addEventListener("change", (e)=>{
+      const id = el.getAttribute("data-id");
+      const val = parseInt(e.target.value,10);
+      if(!isNaN(val) && val>0){
+        state.overrides[id] = val;
+        saveOverrides();
+        render();
+      }
+    });
+  });
+
+  const addCustomBtn = document.querySelector('[data-action="addcustom"]');
+  if(addCustomBtn) addCustomBtn.addEventListener("click", ()=>{
+    const name = document.getElementById("np-name").value.trim();
+    const team = document.getElementById("np-team").value.trim();
+    const role = document.getElementById("np-role").value;
+    const tier = document.getElementById("np-tier").value;
+    const costInput = document.getElementById("np-cost").value;
+    const cost = costInput ? parseInt(costInput,10) : TIER_COST[tier];
+    if(!name || !team) return;
+    const id = pid(state.region, team, name);
+    state.customPlayers.push({ id, region: state.region, team, role, name, tier, baseCost: cost });
+    saveCustom();
+    render();
+  });
+
+  // login / logout
+  const loginBtn = document.querySelector('[data-action="login"]');
+  if(loginBtn) loginBtn.addEventListener("click", ()=>{
+    const val = document.getElementById("login-name").value;
+    claimUsername(val);
+  });
+  const loginInput = document.getElementById("login-name");
+  if(loginInput){
+    loginInput.addEventListener("input", (e)=>{ state.loginInput = e.target.value; });
+    loginInput.addEventListener("keydown", (e)=>{ if(e.key === "Enter") claimUsername(e.target.value); });
+  }
+  const logoutEl = document.querySelector('[data-action="logout"]');
+  if(logoutEl) logoutEl.addEventListener("click", logout);
+
+  // section tabs
+  document.querySelectorAll('[data-action="section"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.section = el.getAttribute("data-section"); render(); });
+  });
+
+  // match center
+  ["mf-week","mf-team1","mf-team2","mf-winner","mf-mvp"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const map = { "mf-week":"week", "mf-team1":"team1", "mf-team2":"team2", "mf-winner":"winner", "mf-mvp":"mvpId" };
+    const field = map[id];
+    const evt = el.tagName === "SELECT" ? "change" : "input";
+    el.addEventListener(evt, (e)=>{
+      state.matchForm[field] = e.target.value;
+      if(field === "team1" || field === "team2"){
+        if(state.matchForm.winner && state.matchForm.winner !== state.matchForm.team1 && state.matchForm.winner !== state.matchForm.team2){
+          state.matchForm.winner = "";
+        }
+        state.matchForm.mvpId = "";
+      }
+      render();
+    });
+  });
+  const addMatchBtn = document.querySelector('[data-action="addmatch"]');
+  if(addMatchBtn) addMatchBtn.addEventListener("click", addMatch);
+  document.querySelectorAll('[data-action="delmatch"]').forEach(el=>{
+    el.addEventListener("click", ()=> deleteMatch(el.getAttribute("data-id")));
+  });
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+loadAll().then(render);
+</script>
+</body>
+</html>
